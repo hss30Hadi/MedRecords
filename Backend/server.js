@@ -2,66 +2,152 @@ const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const path = require('path');
+const nodemailer = require('nodemailer');
+const mysql = require('mysql2');
+require('dotenv').config();
 
-const { Sequelize, DataTypes } = require('sequelize');
 
-//db configuration
-const sequelize = new Sequelize('fyp_medrecords', 'root', '1234', {
+// Connect to MySQL
+const db = mysql.createConnection({
     host: 'localhost',
-    dialect: 'mysql'
-});
-
-sequelize.authenticate()
-    .then(() => console.log('Connected successfully to DB'))
-    .catch(err => console.error('Unable to connect to the database:', err));
-
-// Define User model
-const User = sequelize.define('User', {
-    email: {
-        type: DataTypes.STRING,
-        allowNull: false,
-        unique: true
-    },
-    password: {
-        type: DataTypes.STRING,
-        allowNull: false
+    user: 'root',
+    password: '1234',
+    database: 'fyp_medrecords'
+  });
+  
+  db.connect((err) => {
+    if (err) {
+      console.error('Database connection failed:', err.stack);
+      return;
     }
-});
-
-// Initialize express app
+    console.log('Connected to MySQL database.');
+  });
+  
+  // Configure Nodemailer
+  const transporter = nodemailer.createTransport({
+    service: 'gmail',
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_APP_PASSWORD
+    }
+  });
+  
 const app = express();
 app.use(express.json());
 
-// Signup route
-app.post('/signup', async (req, res) => {
-    const { email, password } = req.body;
-    try {
-        const hashedPassword = await bcrypt.hash(password, 12);
-        const user = await User.create({ email, password: hashedPassword });
-        res.status(201).send('User created');
-    } catch (error) {
-        res.status(500).send('Error creating user');
-    }
-});
 
-// Login route
+
+// Function to generate a 6-digit code
+function generateVerificationCode() {
+    return Math.floor(100000 + Math.random() * 900000).toString(); // Generates a number between 100000 and 999999
+  }
+
+  //login route
 app.post('/login', async (req, res) => {
     const { email, password } = req.body;
-    try {
-        const user = await User.findOne({ where: { email } });
-        if (!user) {
-            return res.status(404).send('User not found');
+  
+    db.query('SELECT * FROM users WHERE email = ?', [email], async (error, results) => {
+      if (error) {
+        console.error('Database query error:', error);
+        return res.status(500).json({ message: 'Server error' });
+      }
+      
+      //checks if user exists
+      if (results.length === 0) {
+        return res.status(400).json({ message: 'User not found' });
+      }
+  
+      const user = results[0];
+      if (user.is_verified === 0) {
+        return res.status(403).json({
+          message: 'Your account is not verified. Please verify your account to continue.',
+          redirectTo: '../login_sign up/verification.html'
+        });
+      }
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ message: 'Invalid email or password' });
+      }
+  
+      res.status(200).json({ message: 'Login successful', user: { id: user.id, email: user.email } });
+    });
+  });
+  
+  app.post('/signup', async (req, res) => {
+    const { username, email, password } = req.body;
+  
+    //check if the user already exists
+    db.query('SELECT * FROM users WHERE email = ?', [email], async (error, results) => {
+      if (error) return res.status(500).json({ error });
+      if (results.length > 0) return res.status(400).json({ message: 'User already exists' });
+  
+      //hash the password
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+  
+      const verificationCode = generateVerificationCode();
+  
+      // Insert new user with verification code
+      db.query(
+        'INSERT INTO users (name, email, password, verification_code) VALUES (?, ?, ?, ?)',
+        [name, email, hashedPassword, verificationCode],
+        (error, results) => {
+          if (error) return res.status(500).json({ error });
+  
+          //sends verification code via email
+          const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Verify Your MedRecords Account',
+            text: `Thank you for signing up to MedRecords Application!\n Please use the following verification code to activate your account:\t ${verificationCode}`
+          };
+  
+          transporter.sendMail(mailOptions, (err, info) => {
+            if (err) {
+              console.error('Error sending email:', err);
+              return res.status(500).json({ message: 'Error sending verification email' });
+            }
+            console.log('Verification email sent:', info.response);
+  
+            res.status(201).json({ message: 'User registered successfully. Please check your email to verify your account.', redirectTo: '/verify' });
+          });
         }
-        const isMatch = await bcrypt.compare(password, user.password);
-        if (!isMatch) {
-            return res.status(400).send('Invalid credentials');
+      );
+    });
+  });
+
+  app.post('/verify', (req, res) => {
+    const { email, verificationCode } = req.body; 
+  
+    db.query(
+      'SELECT * FROM users WHERE email = ? AND verification_code = ?',
+      [email, verificationCode],
+      (error, results) => {
+        if (error) {
+          console.error('Database error during verification:', error);
+          return res.status(500).json({ message: 'Server error during verification' });
         }
-        const token = jwt.sign({ userId: user.id }, 'your_secret_key', { expiresIn: '1h' });
-        res.status(200).json({ token });
-    } catch (error) {
-        res.status(500).send('Server error');
-    }
-});
+  
+        if (results.length === 0) {
+          return res.status(400).json({ message: 'Invalid verification code' });
+        }
+  
+        // If verification code matches, update the user's status to "verified"
+        db.query(
+          'UPDATE users SET is_verified = 1 WHERE email = ?',
+          [email],
+          (updateError) => {
+            if (updateError) {
+              console.error('Error updating user verification status:', updateError);
+              return res.status(500).json({ message: 'Error verifying account' });
+            }
+  
+            res.status(200).json({ message: 'Account verified successfully!' });
+          }
+        );
+      }
+    );
+  });
 
 app.use(express.static(path.join(__dirname, "../Frontend/build")));
 

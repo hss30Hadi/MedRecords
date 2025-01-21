@@ -8,7 +8,7 @@ root.render(
   <React.StrictMode>
     {
       <h1 className='PageTitle'>
-        Med Records
+        Med<a className='Records'>Records</a>
       </h1>
     }
     <App />

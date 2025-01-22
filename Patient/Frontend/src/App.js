@@ -2,7 +2,6 @@ import React from "react";
 import axios from "axios";
 import * as Components from './Components';
 import "./styles.css";
-import { message } from 'antd';
 
 function App() {
     const [signIn, toggle] = React.useState(true);
@@ -21,7 +20,7 @@ function App() {
             ...prevState,
             [name]: value
         }));
-        setError('');  // Clear error on input change
+        setError('');  
     };
 
     const handleSignUp = async (e) => {

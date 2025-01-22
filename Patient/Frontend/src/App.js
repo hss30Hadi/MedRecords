@@ -2,10 +2,12 @@ import React from "react";
 import axios from "axios";
 import * as Components from './Components';
 import "./styles.css";
+import { message } from 'antd';
 
 function App() {
     const [signIn, toggle] = React.useState(true);
-    const [verification, setVerification] = React.useState(false); 
+    const [verification, setVerification] = React.useState(false);
+    const [error, setError] = React.useState('');
     const [formData, setFormData] = React.useState({
         name: '',
         email: '',
@@ -19,55 +21,76 @@ function App() {
             ...prevState,
             [name]: value
         }));
+        setError('');  // Clear error on input change
     };
 
     const handleSignUp = async (e) => {
-        e.preventDefault(); 
+        e.preventDefault();
+        if (!formData.name || !formData.email || !formData.password) {
+            alert('Please fill out all fields.');
+            return;
+        }
         try {
             const response = await axios.post(`${process.env.REACT_APP_API_URL}/signup`, formData);
             console.log('Sign Up Success:', response.data);
-            setVerification(true);  
+            setError('');
+            setVerification(true);
         } catch (error) {
             console.error('Sign Up Error:', error.response.data);
+            alert('Sign Up Failed. Email Already Exists!');
         }
     };
 
     const handleSignIn = async (e) => {
-        e.preventDefault(); 
+        e.preventDefault();
+        if (!formData.email || !formData.password) {
+            alert('Please enter both email and password to sign in.');
+            return;
+        }
         try {
             const response = await axios.post(`${process.env.REACT_APP_API_URL}/login`, {
                 email: formData.email,
                 password: formData.password
             });
             console.log('Sign In Success:', response.data);
+            setError('');
         } catch (error) {
+            alert('Failed to sign in. Check your credentials.');
             console.error('Sign In Error:', error.response.data);
-        }
+                }
     };
 
     const handleVerification = async (e) => {
         e.preventDefault();
+        if (!formData.verificationCode) {
+            setError('Please enter the verification code.');
+            return;
+        }
         try {
             const response = await axios.post(`${process.env.REACT_APP_API_URL}/verify`, {
                 email: formData.email,
                 verificationCode: formData.verificationCode
             });
             console.log('Verification Success:', response.data);
-            setVerification(false);  
-            toggle(true);//moves back to sign in page
+            alert('Account verified successfully. Please sign in.');
+            setError('');
+            setVerification(false);
+            toggle(true);  //move back to sign in page
         } catch (error) {
             console.error('Verification Error:', error.response.data);
+            setError('Invalid verification code. Please try again.');
         }
     };
 
     return (
         <Components.Container>
+            {error && <Components.ErrorMessage>{error}</Components.ErrorMessage>}
             {verification ? (
-                <Components.Form onSubmit={handleVerification}>
+                <Components.VerificationForm onSubmit={handleVerification}>
                     <Components.Title>Verify Your Account</Components.Title>
                     <Components.Input type='text' placeholder='Verification Code' name="verificationCode" value={formData.verificationCode} onChange={handleInputChange} />
                     <Components.Button type="submit">Verify</Components.Button>
-                </Components.Form>
+                </Components.VerificationForm>
             ) : (
                 <>
                     <Components.SignUpContainer signinIn={signIn}>
@@ -105,7 +128,7 @@ function App() {
                             <Components.RightOverlayPanel signinIn={signIn}>
                                 <Components.Title>Hello!</Components.Title>
                                 <Components.Paragraph>
-                                    Enter your personal details and start journey with us
+                                    Enter your personal details and start your journey with us
                                 </Components.Paragraph>
                                 <Components.GhostButton onClick={() => toggle(false)}>
                                     Sign Up

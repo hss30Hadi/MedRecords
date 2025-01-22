@@ -165,12 +165,23 @@ font-size: 14px;
   margin: 20px 0 30px
 `;
 
-export const VerificationContainer = styled.div`
-  position: absolute;
-  top: 0;
-  height: 100%;
-  transition: all 0.6s ease-in-out;
-  left: 0;
-  width: 50%;
-  z-index: 3;
+export const VerificationForm = styled.form`
+background-color: #ffffff;
+display: flex;
+margin-top: 50px;
+align-items: center;
+justify-content: center;
+flex-direction: column;
+padding: 0 50px;
+height: 100%;
+text-align: center;
+`;
+
+export const ErrorMessage = styled.div`
+    color: red;
+    font-size: 16px;
+    margin: 10px 0;
+    font-weight: bold;
+    text-align: center;
+    margin-top: 20px;
 `;

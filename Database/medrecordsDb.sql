@@ -1,7 +1,7 @@
 Create Database fyp_medrecords;
 Use fyp_medrecords;
 
-CREATE TABLE users (
+CREATE TABLE patients (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     email VARCHAR(255) NOT NULL,
@@ -10,3 +10,5 @@ CREATE TABLE users (
     is_verified TINYINT DEFAULT 0,
     profile_pic VARCHAR(255)
 );
+Select * from patients;
+Delete from patients where id>1;

@@ -20,3 +20,12 @@ CREATE TABLE hospitals (
     phoneNumber VARCHAR(20) NOT NULL,
     is_verified TINYINT DEFAULT 0
 );
+
+CREATE TABLE pharmacy (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,   
+    phoneNumber VARCHAR(20) NOT NULL,
+    is_verified TINYINT DEFAULT 0
+);

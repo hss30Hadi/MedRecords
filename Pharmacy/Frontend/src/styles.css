@@ -1,0 +1,30 @@
+@import url("https://fonts.googleapis.com/css?family=Montserrat:400,800");
+
+* {
+  box-sizing: border-box;
+}
+ .PageTitle{
+    text-align: center;
+    color: #1F2B6C;
+    font-size: 2.5em;
+}
+.Records{
+    color: #1A59B5;
+}
+body {
+  background: #f5f5f7;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-direction: column;
+  font-family: "Montserrat", sans-serif;
+  height: 100vh;
+  margin: -20px 0 50px;
+}
+
+.PatientButton{
+  right:65%;
+}
+.PharmacyButton{
+  left: 65%;
+}

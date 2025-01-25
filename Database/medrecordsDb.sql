@@ -11,7 +11,7 @@ CREATE TABLE patients (
     profile_pic VARCHAR(255)
 );
 Select * from patients;
-Delete from patients where id>1;
+
 CREATE TABLE hospitals (
     id INT AUTO_INCREMENT PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
